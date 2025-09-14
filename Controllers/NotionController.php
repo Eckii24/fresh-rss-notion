@@ -255,8 +255,8 @@ class FreshExtension_Notion_Controller extends Minz_ActionController
         
         $properties = [];
         
-        // Get property configurations
-        $property_configs = $this->getPropertyConfigurations();
+        // Get actual property types from Notion database
+        $database_schema = $this->getNotionDatabaseSchema($api_key, $database_id);
         
         // Required properties
         $properties[$url_property] = [
@@ -274,7 +274,7 @@ class FreshExtension_Notion_Controller extends Minz_ActionController
         ];
         
         if (!empty($video_data['author'])) {
-            $author_type = $property_configs[$author_property] ?? 'multi_select';
+            $author_type = $database_schema[$author_property] ?? 'multi_select';
             $properties[$author_property] = $this->formatPropertyValue($video_data['author'], $author_type);
         }
         
@@ -286,16 +286,12 @@ class FreshExtension_Notion_Controller extends Minz_ActionController
             ];
         }
         
-        // Parse and add fixed properties
+        // Parse and add fixed properties using actual property types from database
         if (!empty($fixed_properties)) {
             $fixed_props = $this->parseFixedProperties($fixed_properties);
-            foreach ($fixed_props as $prop_name => $prop_config) {
-                if (is_array($prop_config) && isset($prop_config['value'], $prop_config['type'])) {
-                    $properties[$prop_name] = $this->formatPropertyValue($prop_config['value'], $prop_config['type']);
-                } else {
-                    // Backward compatibility - treat as rich text
-                    $properties[$prop_name] = $this->formatPropertyValue($prop_config, 'rich_text');
-                }
+            foreach ($fixed_props as $prop_name => $prop_value) {
+                $prop_type = $database_schema[$prop_name] ?? 'rich_text';
+                $properties[$prop_name] = $this->formatPropertyValue($prop_value, $prop_type);
             }
         }
 
@@ -307,9 +303,12 @@ class FreshExtension_Notion_Controller extends Minz_ActionController
             'children' => [
                 [
                     'object' => 'block',
-                    'type' => 'embed',
-                    'embed' => [
-                        'url' => $video_data['url']
+                    'type' => 'video',
+                    'video' => [
+                        'type' => 'external',
+                        'external' => [
+                            'url' => $video_data['url']
+                        ]
                     ]
                 ]
             ]
@@ -318,21 +317,12 @@ class FreshExtension_Notion_Controller extends Minz_ActionController
         return $this->callNotionAPI($url, $data, $api_key);
     }
 
-    private function getPropertyConfigurations()
-    {
-        $property_configs_json = FreshRSS_Context::$user_conf->notion_property_configs ?? '{}';
-        try {
-            return json_decode($property_configs_json, true) ?: [];
-        } catch (Exception $e) {
-            return [];
-        }
-    }
 
     private function parseFixedProperties($fixed_properties_string)
     {
         $properties = [];
         
-        // Parse JSON format with types: {"Type": {"value": "Video", "type": "select"}, "Platform": {"value": "YouTube", "type": "rich_text"}}
+        // Try to parse as JSON first: {"Type": "Video", "Platform": "YouTube"}
         try {
             $parsed = json_decode($fixed_properties_string, true);
             if (is_array($parsed)) {
@@ -449,6 +439,42 @@ class FreshExtension_Notion_Controller extends Minz_ActionController
                     ]
                 ];
         }
+    }
+
+    private function getNotionDatabaseSchema($api_key, $database_id)
+    {
+        $url = self::NOTION_API_BASE . "/databases/{$database_id}";
+        
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HTTPHEADER => [
+                'Authorization: Bearer ' . $api_key,
+                'Notion-Version: ' . self::NOTION_API_VERSION,
+            ],
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_SSL_VERIFYPEER => true,
+        ]);
+
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($http_code !== 200) {
+            return [];
+        }
+
+        $result = json_decode($response, true);
+        $properties = [];
+        
+        if (isset($result['properties'])) {
+            foreach ($result['properties'] as $name => $property) {
+                $properties[$name] = $property['type'];
+            }
+        }
+        
+        return $properties;
     }
 
     private function callNotionAPI($url, $data, $api_key)
