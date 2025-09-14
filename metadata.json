@@ -1,0 +1,8 @@
+{
+  "name": "Notion",
+  "author": "Eckii24",
+  "description": "Notion integration for FreshRSS - Add YouTube videos to Notion database with automatic metadata extraction",
+  "version": "1.0.0",
+  "entrypoint": "Notion",
+  "type": "user"
+}
