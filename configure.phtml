@@ -1,0 +1,149 @@
+<?php
+$notion_api_key = FreshRSS_Context::$user_conf->notion_api_key ?? '';
+$notion_database_id = FreshRSS_Context::$user_conf->notion_database_id ?? '';
+$youtube_api_key = FreshRSS_Context::$user_conf->youtube_api_key ?? '';
+
+$notion_url_property = FreshRSS_Context::$user_conf->notion_url_property ?? 'Url';
+$notion_name_property = FreshRSS_Context::$user_conf->notion_name_property ?? 'Name';
+$notion_author_property = FreshRSS_Context::$user_conf->notion_author_property ?? 'Author';
+$notion_date_property = FreshRSS_Context::$user_conf->notion_date_property ?? 'Date';
+$notion_fixed_properties = FreshRSS_Context::$user_conf->notion_fixed_properties ?? '';
+?>
+
+<form action="<?php echo _url('extension', 'configure', 'e', urlencode($this->getName())); ?>" method="post">
+    <input type="hidden" name="_csrf" value="<?php echo FreshRSS_Auth::csrfToken(); ?>" />
+    
+    <h3>Notion Configuration</h3>
+    
+    <div class="form-group">
+        <label for="notion_api_key">Notion API Key:</label>
+        <input type="password" name="notion_api_key" id="notion_api_key" value="<?php echo htmlspecialchars($notion_api_key); ?>" placeholder="Enter your Notion integration API key" style="width: 100%; max-width: 400px;">
+        <small>Create an integration at <a href="https://www.notion.so/my-integrations" target="_blank">Notion My Integrations</a></small>
+    </div>
+    
+    <div class="form-group">
+        <label for="notion_database_id">Notion Database ID:</label>
+        <input type="text" name="notion_database_id" id="notion_database_id" value="<?php echo htmlspecialchars($notion_database_id); ?>" placeholder="Database ID from URL" style="width: 100%; max-width: 400px;">
+        <small>Copy the ID from your Notion database URL (32-character string after the last slash)</small>
+    </div>
+    
+    <div class="form-group">
+        <label for="youtube_api_key">YouTube API Key (Optional):</label>
+        <input type="password" name="youtube_api_key" id="youtube_api_key" value="<?php echo htmlspecialchars($youtube_api_key); ?>" placeholder="YouTube Data API v3 key" style="width: 100%; max-width: 400px;">
+        <small>Get your API key from <a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a>. If not provided, will use HTML scraping for metadata.</small>
+    </div>
+    
+    <h4>Property Mappings</h4>
+    <p><small>Map FreshRSS data to your Notion database properties. Property names must match exactly (case-sensitive).</small></p>
+    
+    <div class="form-group">
+        <label for="notion_url_property">URL Property Name:</label>
+        <input type="text" name="notion_url_property" id="notion_url_property" value="<?php echo htmlspecialchars($notion_url_property); ?>" placeholder="Url" style="width: 200px;">
+        <small>Notion URL property for the video link</small>
+    </div>
+    
+    <div class="form-group">
+        <label for="notion_name_property">Title Property Name:</label>
+        <input type="text" name="notion_name_property" id="notion_name_property" value="<?php echo htmlspecialchars($notion_name_property); ?>" placeholder="Name" style="width: 200px;">
+        <small>Notion Title property for the video title</small>
+    </div>
+    
+    <div class="form-group">
+        <label for="notion_author_property">Author Property Name:</label>
+        <input type="text" name="notion_author_property" id="notion_author_property" value="<?php echo htmlspecialchars($notion_author_property); ?>" placeholder="Author" style="width: 200px;">
+        <small>Notion Multi-select property for the channel name</small>
+    </div>
+    
+    <div class="form-group">
+        <label for="notion_date_property">Date Property Name:</label>
+        <input type="text" name="notion_date_property" id="notion_date_property" value="<?php echo htmlspecialchars($notion_date_property); ?>" placeholder="Date" style="width: 200px;">
+        <small>Notion Date property for the upload date</small>
+    </div>
+    
+    <h4>Additional Fixed Properties</h4>
+    <div class="form-group">
+        <label for="notion_fixed_properties">Fixed Properties (JSON or Key=Value format):</label>
+        <textarea name="notion_fixed_properties" id="notion_fixed_properties" rows="4" style="width: 100%; max-width: 600px;" placeholder='{"Type": "Video", "Platform": "YouTube", "Status": "To Read"}&#10;or&#10;Type=Video,Platform=YouTube,Status=To Read'><?php echo htmlspecialchars($notion_fixed_properties); ?></textarea>
+        <small>Additional properties to set for every video. Use JSON format or simple Key=Value,Key=Value format. Properties must already exist in your Notion database.</small>
+    </div>
+    
+    <hr />
+    <button type="submit" class="btn btn-important">Save Configuration</button>
+</form>
+
+<style>
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.form-group small {
+    display: block;
+    color: #666;
+    margin-top: 5px;
+    font-style: italic;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-important {
+    background: #4285f4;
+    color: white;
+}
+
+.btn-important:hover {
+    background: #3367d6;
+}
+
+h4 {
+    margin-top: 30px;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+/* Dark mode support for configuration form */
+@media (prefers-color-scheme: dark) {
+    .form-group small {
+        color: #a0aec0;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        background: #2d3748;
+        border: 1px solid #4a5568;
+        color: #e2e8f0;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        border-color: #4285f4;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+    }
+    
+    h4 {
+        color: #e2e8f0;
+    }
+}
+</style>
