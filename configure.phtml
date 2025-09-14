@@ -8,6 +8,7 @@ $notion_name_property = FreshRSS_Context::$user_conf->notion_name_property ?? 'N
 $notion_author_property = FreshRSS_Context::$user_conf->notion_author_property ?? 'Author';
 $notion_date_property = FreshRSS_Context::$user_conf->notion_date_property ?? 'Date';
 $notion_fixed_properties = FreshRSS_Context::$user_conf->notion_fixed_properties ?? '';
+$notion_property_configs = FreshRSS_Context::$user_conf->notion_property_configs ?? '{}';
 ?>
 
 <form action="<?php echo _url('extension', 'configure', 'e', urlencode($this->getName())); ?>" method="post">
@@ -51,7 +52,7 @@ $notion_fixed_properties = FreshRSS_Context::$user_conf->notion_fixed_properties
     <div class="form-group">
         <label for="notion_author_property">Author Property Name:</label>
         <input type="text" name="notion_author_property" id="notion_author_property" value="<?php echo htmlspecialchars($notion_author_property); ?>" placeholder="Author" style="width: 200px;">
-        <small>Notion Multi-select property for the channel name</small>
+        <small>Notion property for the channel name (default: multi_select)</small>
     </div>
     
     <div class="form-group">
@@ -60,11 +61,18 @@ $notion_fixed_properties = FreshRSS_Context::$user_conf->notion_fixed_properties
         <small>Notion Date property for the upload date</small>
     </div>
     
+    <h4>Property Type Configuration (Optional)</h4>
+    <div class="form-group">
+        <label for="notion_property_configs">Property Type Mappings (JSON):</label>
+        <textarea name="notion_property_configs" id="notion_property_configs" rows="4" style="width: 100%; max-width: 600px;" placeholder='{"Author": "multi_select", "Status": "select", "Rating": "number", "Watched": "checkbox"}'><?php echo htmlspecialchars($notion_property_configs); ?></textarea>
+        <small>Override default property types. Supported types: rich_text, title, select, multi_select, number, checkbox, url, email, phone_number, date</small>
+    </div>
+    
     <h4>Additional Fixed Properties</h4>
     <div class="form-group">
-        <label for="notion_fixed_properties">Fixed Properties (JSON or Key=Value format):</label>
-        <textarea name="notion_fixed_properties" id="notion_fixed_properties" rows="4" style="width: 100%; max-width: 600px;" placeholder='{"Type": "Video", "Platform": "YouTube", "Status": "To Read"}&#10;or&#10;Type=Video,Platform=YouTube,Status=To Read'><?php echo htmlspecialchars($notion_fixed_properties); ?></textarea>
-        <small>Additional properties to set for every video. Use JSON format or simple Key=Value,Key=Value format. Properties must already exist in your Notion database.</small>
+        <label for="notion_fixed_properties">Fixed Properties:</label>
+        <textarea name="notion_fixed_properties" id="notion_fixed_properties" rows="6" style="width: 100%; max-width: 600px;" placeholder='Advanced JSON format with types:&#10;{"Type": {"value": "Video", "type": "select"}, "Platform": {"value": "YouTube", "type": "rich_text"}, "Watched": {"value": false, "type": "checkbox"}}&#10;&#10;Simple format (uses rich_text by default):&#10;{"Type": "Video", "Platform": "YouTube", "Status": "To Read"}&#10;&#10;Key=Value format:&#10;Type=Video,Platform=YouTube,Status=To Read'><?php echo htmlspecialchars($notion_fixed_properties); ?></textarea>
+        <small>Additional properties to set for every video. You can specify property types in the advanced JSON format, or use simple formats which default to rich_text. Properties must already exist in your Notion database.</small>
     </div>
     
     <hr />

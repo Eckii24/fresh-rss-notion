@@ -71,6 +71,9 @@ class NotionExtension extends Minz_Extension
             FreshRSS_Context::$user_conf->notion_author_property = Minz_Request::param('notion_author_property', 'Author');
             FreshRSS_Context::$user_conf->notion_date_property = Minz_Request::param('notion_date_property', 'Date');
             
+            // Property type configurations
+            FreshRSS_Context::$user_conf->notion_property_configs = Minz_Request::param('notion_property_configs', '{}');
+            
             // Additional fixed properties
             FreshRSS_Context::$user_conf->notion_fixed_properties = Minz_Request::param('notion_fixed_properties', '');
             

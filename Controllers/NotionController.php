@@ -255,6 +255,9 @@ class FreshExtension_Notion_Controller extends Minz_ActionController
         
         $properties = [];
         
+        // Get property configurations
+        $property_configs = $this->getPropertyConfigurations();
+        
         // Required properties
         $properties[$url_property] = [
             'url' => $video_data['url']
@@ -271,13 +274,8 @@ class FreshExtension_Notion_Controller extends Minz_ActionController
         ];
         
         if (!empty($video_data['author'])) {
-            $properties[$author_property] = [
-                'multi_select' => [
-                    [
-                        'name' => $video_data['author']
-                    ]
-                ]
-            ];
+            $author_type = $property_configs[$author_property] ?? 'multi_select';
+            $properties[$author_property] = $this->formatPropertyValue($video_data['author'], $author_type);
         }
         
         if (!empty($video_data['upload_date'])) {
@@ -291,8 +289,13 @@ class FreshExtension_Notion_Controller extends Minz_ActionController
         // Parse and add fixed properties
         if (!empty($fixed_properties)) {
             $fixed_props = $this->parseFixedProperties($fixed_properties);
-            foreach ($fixed_props as $prop_name => $prop_value) {
-                $properties[$prop_name] = $this->formatPropertyValue($prop_value);
+            foreach ($fixed_props as $prop_name => $prop_config) {
+                if (is_array($prop_config) && isset($prop_config['value'], $prop_config['type'])) {
+                    $properties[$prop_name] = $this->formatPropertyValue($prop_config['value'], $prop_config['type']);
+                } else {
+                    // Backward compatibility - treat as rich text
+                    $properties[$prop_name] = $this->formatPropertyValue($prop_config, 'rich_text');
+                }
             }
         }
 
@@ -300,17 +303,36 @@ class FreshExtension_Notion_Controller extends Minz_ActionController
             'parent' => [
                 'database_id' => $database_id
             ],
-            'properties' => $properties
+            'properties' => $properties,
+            'children' => [
+                [
+                    'object' => 'block',
+                    'type' => 'embed',
+                    'embed' => [
+                        'url' => $video_data['url']
+                    ]
+                ]
+            ]
         ];
 
         return $this->callNotionAPI($url, $data, $api_key);
+    }
+
+    private function getPropertyConfigurations()
+    {
+        $property_configs_json = FreshRSS_Context::$user_conf->notion_property_configs ?? '{}';
+        try {
+            return json_decode($property_configs_json, true) ?: [];
+        } catch (Exception $e) {
+            return [];
+        }
     }
 
     private function parseFixedProperties($fixed_properties_string)
     {
         $properties = [];
         
-        // Parse JSON format: {"Type": "Video", "Platform": "YouTube", "Status": "To Read"}
+        // Parse JSON format with types: {"Type": {"value": "Video", "type": "select"}, "Platform": {"value": "YouTube", "type": "rich_text"}}
         try {
             $parsed = json_decode($fixed_properties_string, true);
             if (is_array($parsed)) {
@@ -332,19 +354,101 @@ class FreshExtension_Notion_Controller extends Minz_ActionController
         return $properties;
     }
 
-    private function formatPropertyValue($value)
+    private function formatPropertyValue($value, $type = 'rich_text')
     {
-        // For now, treat all as rich text. 
-        // In production, you might want to detect types based on value format
-        return [
-            'rich_text' => [
-                [
-                    'text' => [
-                        'content' => (string) $value
+        switch ($type) {
+            case 'title':
+                return [
+                    'title' => [
+                        [
+                            'text' => [
+                                'content' => (string) $value
+                            ]
+                        ]
                     ]
-                ]
-            ]
-        ];
+                ];
+            
+            case 'rich_text':
+                return [
+                    'rich_text' => [
+                        [
+                            'text' => [
+                                'content' => (string) $value
+                            ]
+                        ]
+                    ]
+                ];
+            
+            case 'select':
+                return [
+                    'select' => [
+                        'name' => (string) $value
+                    ]
+                ];
+            
+            case 'multi_select':
+                // Handle both single values and comma-separated values
+                $values = is_array($value) ? $value : explode(',', $value);
+                $options = [];
+                foreach ($values as $val) {
+                    $val = trim($val);
+                    if (!empty($val)) {
+                        $options[] = ['name' => $val];
+                    }
+                }
+                return [
+                    'multi_select' => $options
+                ];
+            
+            case 'number':
+                return [
+                    'number' => is_numeric($value) ? (float) $value : null
+                ];
+            
+            case 'checkbox':
+                return [
+                    'checkbox' => filter_var($value, FILTER_VALIDATE_BOOLEAN)
+                ];
+            
+            case 'url':
+                return [
+                    'url' => (string) $value
+                ];
+            
+            case 'email':
+                return [
+                    'email' => (string) $value
+                ];
+            
+            case 'phone_number':
+                return [
+                    'phone_number' => (string) $value
+                ];
+            
+            case 'date':
+                // Try to parse the date
+                $timestamp = is_numeric($value) ? $value : strtotime($value);
+                if ($timestamp !== false) {
+                    return [
+                        'date' => [
+                            'start' => date('Y-m-d', $timestamp)
+                        ]
+                    ];
+                }
+                return null;
+            
+            default:
+                // Default to rich_text for unknown types
+                return [
+                    'rich_text' => [
+                        [
+                            'text' => [
+                                'content' => (string) $value
+                            ]
+                        ]
+                    ]
+                ];
+        }
     }
 
     private function callNotionAPI($url, $data, $api_key)
