@@ -55,7 +55,7 @@ class NotionExtension extends Minz_Extension
         
         // Only include /watch URLs (not youtu.be shortened URLs based on requirements)
         // The requirement specifically mentions detection by path start (/shorts vs /watch)
-        return preg_match('/youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/', $url);
+        return preg_match('/youtube\.com\/watch\?.*v=([a-zA-Z0-9_-]{11})/', $url) > 0;
     }
 
     public function handleConfigureAction()
