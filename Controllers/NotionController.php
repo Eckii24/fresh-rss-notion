@@ -376,6 +376,13 @@ class FreshExtension_Notion_Controller extends Minz_ActionController
                     ]
                 ];
             
+            case 'status':
+                return [
+                    'status' => [
+                        'name' => (string) $value
+                    ]
+                ];
+            
             case 'multi_select':
                 // Handle both single values and comma-separated values
                 $values = is_array($value) ? $value : explode(',', $value);
